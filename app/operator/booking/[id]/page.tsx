@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { BookingWithReturns, Return } from '@/lib/types';
+import { parseAmazonReturnEmail, type ParsedReturn } from '@/lib/parse-email';
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -138,33 +139,118 @@ export default function MappingPage() {
             Forwarded Emails ({booking.pasted_emails.length})
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {booking.pasted_emails.map((email, i) => (
-              <details key={email.id} style={{ background: 'white', borderRadius: 8, border: '1px solid #fcd34d' }}>
-                <summary style={{
-                  padding: '12px 14px',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: '#92400e',
-                }}>
-                  Email {i + 1} — {new Date(email.pasted_at).toLocaleString()}
-                </summary>
-                <pre style={{
-                  margin: 0,
-                  padding: 14,
-                  fontSize: 13,
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  borderTop: '1px solid #fcd34d',
-                  background: '#fefce8',
-                  borderRadius: '0 0 8px 8px',
-                  maxHeight: 300,
-                  overflow: 'auto',
-                }}>
-                  {email.content}
-                </pre>
-              </details>
-            ))}
+            {booking.pasted_emails.map((email, i) => {
+              const parsed = parseAmazonReturnEmail(email.content);
+              const hasParsedData = parsed.orderId || parsed.carrier || parsed.deadline;
+
+              return (
+                <div key={email.id} style={{ background: 'white', borderRadius: 8, border: '1px solid #fcd34d' }}>
+                  {/* Parsed Data Summary */}
+                  {hasParsedData && (
+                    <div style={{
+                      padding: '12px 14px',
+                      borderBottom: '1px solid #fcd34d',
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 8,
+                      alignItems: 'center',
+                    }}>
+                      {parsed.orderId && (
+                        <span style={{
+                          background: '#dbeafe',
+                          color: '#1e40af',
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          fontSize: 13,
+                          fontWeight: 500,
+                          fontFamily: 'monospace',
+                        }}>
+                          #{parsed.orderId}
+                        </span>
+                      )}
+                      {parsed.destination && (
+                        <span style={{
+                          background: '#d1fae5',
+                          color: '#065f46',
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          fontSize: 13,
+                          fontWeight: 500,
+                        }}>
+                          {parsed.destination}
+                        </span>
+                      )}
+                      {parsed.deadline && (
+                        <span style={{
+                          background: '#fef3c7',
+                          color: '#92400e',
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          fontSize: 13,
+                          fontWeight: 500,
+                        }}>
+                          Due: {new Date(parsed.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      )}
+                      <button
+                        onClick={async () => {
+                          await fetch('/api/returns', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              booking_id: id,
+                              items: parsed.orderId ? [`Order ${parsed.orderId}`] : ['Amazon Return'],
+                              destination: parsed.destination || null,
+                              deadline: parsed.deadline || null,
+                            }),
+                          });
+                          loadBooking();
+                        }}
+                        style={{
+                          marginLeft: 'auto',
+                          background: '#0f5c48',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: 6,
+                          fontSize: 13,
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        + Add Return
+                      </button>
+                    </div>
+                  )}
+
+                  <details>
+                    <summary style={{
+                      padding: '12px 14px',
+                      cursor: 'pointer',
+                      fontSize: 14,
+                      fontWeight: 500,
+                      color: '#92400e',
+                    }}>
+                      {hasParsedData ? 'View full email' : `Email ${i + 1} — ${new Date(email.pasted_at).toLocaleString()}`}
+                    </summary>
+                    <pre style={{
+                      margin: 0,
+                      padding: 14,
+                      fontSize: 13,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      borderTop: '1px solid #fcd34d',
+                      background: '#fefce8',
+                      borderRadius: '0 0 8px 8px',
+                      maxHeight: 300,
+                      overflow: 'auto',
+                    }}>
+                      {email.content}
+                    </pre>
+                  </details>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
