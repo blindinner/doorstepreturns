@@ -14,7 +14,7 @@
 
 const CONFIG = {
   // Your booking page URL
-  bookingUrl: 'https://your-domain.vercel.app/book',
+  bookingUrl: 'https://doorstepreturns.vercel.app/book',
 
   // Label to mark processed emails (will be created automatically)
   processedLabel: 'DoorstepReturns/Processed',
@@ -106,7 +106,7 @@ function processNewEmails() {
 
     // Mark as processed
     thread.addLabel(label);
-    thread.markAsRead();
+    thread.markRead();
   });
 }
 

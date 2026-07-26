@@ -52,10 +52,17 @@ async function initDb() {
       created_at TEXT NOT NULL,
       FOREIGN KEY (booking_id) REFERENCES bookings(id)
     )`,
+    `CREATE TABLE IF NOT EXISTS pending_emails (
+      id TEXT PRIMARY KEY,
+      sender_email TEXT NOT NULL,
+      content TEXT NOT NULL,
+      received_at TEXT NOT NULL
+    )`,
     `CREATE INDEX IF NOT EXISTS idx_bookings_token ON bookings(token)`,
     `CREATE INDEX IF NOT EXISTS idx_bookings_email ON bookings(customer_email)`,
     `CREATE INDEX IF NOT EXISTS idx_returns_booking ON returns(booking_id)`,
     `CREATE INDEX IF NOT EXISTS idx_pasted_emails_booking ON pasted_emails(booking_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_pending_emails_sender ON pending_emails(sender_email)`,
   ]);
 
   initialized = true;
@@ -349,5 +356,39 @@ export const db = {
       result.push({ ...booking, returns });
     }
     return result;
+  },
+
+  // Pending emails (received before booking exists)
+  async storePendingEmail(senderEmail: string, content: string): Promise<void> {
+    await initDb();
+    const id = crypto.randomUUID();
+    const received_at = new Date().toISOString();
+
+    await turso.execute({
+      sql: 'INSERT INTO pending_emails (id, sender_email, content, received_at) VALUES (?, ?, ?, ?)',
+      args: [id, senderEmail.toLowerCase(), content, received_at],
+    });
+  },
+
+  async getPendingEmails(senderEmail: string): Promise<{ id: string; content: string; received_at: string }[]> {
+    await initDb();
+    const result = await turso.execute({
+      sql: 'SELECT * FROM pending_emails WHERE sender_email = ? ORDER BY received_at DESC',
+      args: [senderEmail.toLowerCase()],
+    });
+
+    return result.rows.map(row => ({
+      id: row.id as string,
+      content: row.content as string,
+      received_at: row.received_at as string,
+    }));
+  },
+
+  async deletePendingEmails(senderEmail: string): Promise<void> {
+    await initDb();
+    await turso.execute({
+      sql: 'DELETE FROM pending_emails WHERE sender_email = ?',
+      args: [senderEmail.toLowerCase()],
+    });
   },
 };

@@ -56,17 +56,15 @@ export async function POST(request: NextRequest) {
     // First, check if there's an existing booking for this email
     let booking = await db.getBookingByEmail(cleanEmail);
 
+    // Store the email content for this sender
+    // We'll store it as a "pending email" that gets linked when they book
+    await db.storePendingEmail(cleanEmail, `Subject: ${subject}\n\n${body}`);
+    console.log(`[Inbound Email] Stored email from: ${cleanEmail}`);
+
     if (booking) {
-      // Add the forwarded email to existing booking
+      // Also add to existing booking if they already have one
       await db.addPastedEmail(booking.id, `Subject: ${subject}\n\n${body}`);
       console.log(`[Inbound Email] Added to existing booking: ${booking.id}`);
-    } else {
-      // Store for later - when they complete booking, we'll match by email
-      // For now, we'll create a "pending" record in a separate table or just log it
-      console.log(`[Inbound Email] No booking found for ${cleanEmail} - email stored for matching`);
-
-      // You could store this in a separate "pending_emails" table
-      // For now, we'll just acknowledge receipt
     }
 
     // Return success - the email service needs a 200 response

@@ -26,6 +26,18 @@ export async function POST(request: NextRequest) {
     order_status: 'open',
   });
 
+  // Link any pending emails from this customer
+  if (customer_email) {
+    const pendingEmails = await db.getPendingEmails(customer_email);
+    for (const email of pendingEmails) {
+      await db.addPastedEmail(booking.id, email.content);
+    }
+    if (pendingEmails.length > 0) {
+      await db.deletePendingEmails(customer_email);
+      console.log(`[Booking] Linked ${pendingEmails.length} pending email(s) to booking ${booking.id}`);
+    }
+  }
+
   return NextResponse.json({ token: booking.token, id: booking.id });
 }
 
