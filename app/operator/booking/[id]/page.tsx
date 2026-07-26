@@ -4,6 +4,23 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { BookingWithReturns, Return } from '@/lib/types';
 
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '10px 12px',
+  border: '1px solid #e5e7eb',
+  borderRadius: 8,
+  fontSize: 14,
+  outline: 'none',
+};
+
+const cardStyle: React.CSSProperties = {
+  background: 'white',
+  borderRadius: 12,
+  padding: 20,
+  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+  border: '1px solid #e5e7eb',
+};
+
 export default function MappingPage() {
   const params = useParams();
   const router = useRouter();
@@ -13,7 +30,6 @@ export default function MappingPage() {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
 
-  // Form state for new return
   const [items, setItems] = useState('');
   const [destination, setDestination] = useState('');
   const [bagNumber, setBagNumber] = useState('');
@@ -34,7 +50,6 @@ export default function MappingPage() {
 
   const addReturn = async () => {
     if (!items.trim()) return;
-
     setAdding(true);
     await fetch('/api/returns', {
       method: 'POST',
@@ -47,8 +62,6 @@ export default function MappingPage() {
         deadline: deadline || null,
       }),
     });
-
-    // Reset form and reload
     setItems('');
     setDestination('');
     setBagNumber('');
@@ -72,56 +85,82 @@ export default function MappingPage() {
     loadBooking();
   };
 
-  const markEmailsReceived = async () => {
-    await fetch(`/api/bookings/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emails_received_at: new Date().toISOString() }),
-    });
-    loadBooking();
-  };
-
   if (loading || !booking) {
-    return <main className="p-4"><p>Loading...</p></main>;
+    return <p style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Loading...</p>;
   }
 
   return (
-    <main className="p-4 pb-32">
-      <button onClick={() => router.back()} className="text-blue-600 text-sm mb-4">
-        ← Back
+    <div style={{ paddingBottom: 280 }}>
+      <button
+        onClick={() => router.back()}
+        style={{
+          background: 'none',
+          border: 'none',
+          color: '#0f5c48',
+          fontSize: 14,
+          fontWeight: 500,
+          cursor: 'pointer',
+          marginBottom: 16,
+          padding: 0,
+        }}
+      >
+        ← Back to inbox
       </button>
 
-      <div className="bg-white rounded-lg border p-4 mb-4">
-        <h1 className="font-bold text-lg">{booking.customer_name}</h1>
-        <p className="text-gray-600 text-sm">{booking.address}</p>
-        <p className="text-gray-500 text-sm">{booking.phone}</p>
-        {booking.access_notes && (
-          <p className="text-gray-500 text-sm mt-1">Notes: {booking.access_notes}</p>
-        )}
-        <p className="text-sm mt-2">
-          {new Date(booking.pickup_date).toLocaleDateString()} • {booking.pickup_slot}
-        </p>
+      {/* Customer Info Card */}
+      <div style={{ ...cardStyle, marginBottom: 16 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 12px' }}>{booking.customer_name}</h1>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <p style={{ margin: 0, fontSize: 15, color: '#374151' }}>{booking.address}</p>
+          <p style={{ margin: 0, fontSize: 15, color: '#6b7280' }}>{booking.phone}</p>
+          {booking.access_notes && (
+            <p style={{ margin: 0, fontSize: 14, color: '#9ca3af', fontStyle: 'italic' }}>
+              {booking.access_notes}
+            </p>
+          )}
+        </div>
+        <div style={{
+          marginTop: 16,
+          paddingTop: 16,
+          borderTop: '1px solid #f3f4f6',
+          fontSize: 14,
+          color: '#6b7280',
+        }}>
+          {new Date(booking.pickup_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          {' · '}{booking.pickup_slot}
+        </div>
       </div>
 
-      {!booking.emails_received_at && !booking.pasted_emails?.length && (
-        <button
-          onClick={markEmailsReceived}
-          className="w-full py-2 mb-4 bg-yellow-100 text-yellow-800 rounded-lg text-sm"
-        >
-          Mark emails as received
-        </button>
-      )}
-
+      {/* Forwarded Emails */}
       {booking.pasted_emails && booking.pasted_emails.length > 0 && (
-        <div className="mb-4">
-          <h2 className="font-semibold mb-2">Customer Emails ({booking.pasted_emails.length})</h2>
-          <div className="space-y-2">
+        <div style={{ ...cardStyle, marginBottom: 16, background: '#fffbeb' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 12px', color: '#92400e' }}>
+            Forwarded Emails ({booking.pasted_emails.length})
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {booking.pasted_emails.map((email, i) => (
-              <details key={email.id} className="bg-yellow-50 border border-yellow-200 rounded-lg">
-                <summary className="px-3 py-2 cursor-pointer text-sm font-medium text-yellow-800">
+              <details key={email.id} style={{ background: 'white', borderRadius: 8, border: '1px solid #fcd34d' }}>
+                <summary style={{
+                  padding: '12px 14px',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: '#92400e',
+                }}>
                   Email {i + 1} — {new Date(email.pasted_at).toLocaleString()}
                 </summary>
-                <pre className="px-3 py-2 text-xs whitespace-pre-wrap border-t border-yellow-200 bg-white rounded-b-lg max-h-64 overflow-y-auto">
+                <pre style={{
+                  margin: 0,
+                  padding: 14,
+                  fontSize: 13,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  borderTop: '1px solid #fcd34d',
+                  background: '#fefce8',
+                  borderRadius: '0 0 8px 8px',
+                  maxHeight: 300,
+                  overflow: 'auto',
+                }}>
                   {email.content}
                 </pre>
               </details>
@@ -130,104 +169,142 @@ export default function MappingPage() {
         </div>
       )}
 
-      <h2 className="font-semibold mb-2">Returns ({booking.returns.length})</h2>
+      {/* Returns */}
+      <div style={{ marginBottom: 16 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>
+          Returns ({booking.returns.length})
+        </h2>
 
-      <div className="space-y-3 mb-6">
-        {booking.returns.map((ret) => (
-          <div key={ret.id} className="bg-white rounded-lg border p-3">
-            <div className="flex justify-between items-start mb-2">
-              <input
-                type="text"
-                value={ret.bag_number || ''}
-                onChange={(e) => updateReturn(ret.id, { bag_number: e.target.value })}
-                placeholder="Bag #"
-                className="w-20 px-2 py-1 border rounded text-sm font-mono"
-              />
-              <button
-                onClick={() => deleteReturn(ret.id)}
-                className="text-red-500 text-sm"
-              >
-                Delete
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <input
-                type="text"
-                value={ret.items.join(', ')}
-                onChange={(e) => updateReturn(ret.id, {
-                  items: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
-                })}
-                placeholder="Items (comma separated)"
-                className="w-full px-2 py-1 border rounded text-sm"
-              />
-              <input
-                type="text"
-                value={ret.destination || ''}
-                onChange={(e) => updateReturn(ret.id, { destination: e.target.value })}
-                placeholder="Destination (e.g., UPS Store - 4th & Main)"
-                className="w-full px-2 py-1 border rounded text-sm"
-              />
-              <input
-                type="date"
-                value={ret.deadline || ''}
-                onChange={(e) => updateReturn(ret.id, { deadline: e.target.value })}
-                className="w-full px-2 py-1 border rounded text-sm"
-              />
-            </div>
-
-            {ret.deadline && (
-              <p className={`text-xs mt-2 ${
-                new Date(ret.deadline) < new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
-                  ? 'text-red-600 font-medium'
-                  : 'text-gray-500'
-              }`}>
-                Due: {new Date(ret.deadline).toLocaleDateString()}
-              </p>
-            )}
+        {booking.returns.length === 0 ? (
+          <p style={{ color: '#9ca3af', fontSize: 14 }}>No returns added yet. Use the form below to add returns.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {booking.returns.map((ret) => (
+              <div key={ret.id} style={cardStyle}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <input
+                    type="text"
+                    value={ret.bag_number || ''}
+                    onChange={(e) => updateReturn(ret.id, { bag_number: e.target.value })}
+                    placeholder="Bag #"
+                    style={{ ...inputStyle, width: 100, fontFamily: 'monospace', fontWeight: 600 }}
+                  />
+                  <button
+                    onClick={() => deleteReturn(ret.id)}
+                    style={{
+                      background: '#fef2f2',
+                      color: '#dc2626',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: 6,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <input
+                    type="text"
+                    value={ret.items.join(', ')}
+                    onChange={(e) => updateReturn(ret.id, {
+                      items: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                    })}
+                    placeholder="Items (comma separated)"
+                    style={inputStyle}
+                  />
+                  <input
+                    type="text"
+                    value={ret.destination || ''}
+                    onChange={(e) => updateReturn(ret.id, { destination: e.target.value })}
+                    placeholder="Destination (e.g., UPS Store)"
+                    style={inputStyle}
+                  />
+                  <input
+                    type="date"
+                    value={ret.deadline || ''}
+                    onChange={(e) => updateReturn(ret.id, { deadline: e.target.value })}
+                    style={inputStyle}
+                  />
+                </div>
+                {ret.deadline && (
+                  <p style={{
+                    margin: '12px 0 0',
+                    fontSize: 13,
+                    color: new Date(ret.deadline) < new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) ? '#dc2626' : '#6b7280',
+                    fontWeight: new Date(ret.deadline) < new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) ? 600 : 400,
+                  }}>
+                    Due: {new Date(ret.deadline).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4">
-        <h3 className="font-medium mb-2">Add Return</h3>
-        <div className="grid grid-cols-2 gap-2 mb-2">
+      {/* Add Return Form */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: 'white',
+        borderTop: '1px solid #e5e7eb',
+        padding: 20,
+        boxShadow: '0 -4px 12px rgba(0,0,0,0.05)',
+      }}>
+        <div style={{ maxWidth: 800, margin: '0 auto' }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, margin: '0 0 12px' }}>Add Return</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+            <input
+              type="text"
+              value={bagNumber}
+              onChange={(e) => setBagNumber(e.target.value)}
+              placeholder="Bag #"
+              style={inputStyle}
+            />
+            <input
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              style={inputStyle}
+            />
+          </div>
           <input
             type="text"
-            value={bagNumber}
-            onChange={(e) => setBagNumber(e.target.value)}
-            placeholder="Bag #"
-            className="px-2 py-2 border rounded text-sm"
+            value={items}
+            onChange={(e) => setItems(e.target.value)}
+            placeholder="Items (comma separated)"
+            style={{ ...inputStyle, marginBottom: 10 }}
           />
           <input
-            type="date"
-            value={deadline}
-            onChange={(e) => setDeadline(e.target.value)}
-            className="px-2 py-2 border rounded text-sm"
+            type="text"
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
+            placeholder="Destination"
+            style={{ ...inputStyle, marginBottom: 12 }}
           />
+          <button
+            onClick={addReturn}
+            disabled={adding || !items.trim()}
+            style={{
+              width: '100%',
+              padding: '12px 20px',
+              background: adding || !items.trim() ? '#d1d5db' : '#0f5c48',
+              color: 'white',
+              border: 'none',
+              borderRadius: 8,
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: adding || !items.trim() ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {adding ? 'Adding...' : 'Add Return'}
+          </button>
         </div>
-        <input
-          type="text"
-          value={items}
-          onChange={(e) => setItems(e.target.value)}
-          placeholder="Items (comma separated)"
-          className="w-full px-2 py-2 border rounded text-sm mb-2"
-        />
-        <input
-          type="text"
-          value={destination}
-          onChange={(e) => setDestination(e.target.value)}
-          placeholder="Destination"
-          className="w-full px-2 py-2 border rounded text-sm mb-2"
-        />
-        <button
-          onClick={addReturn}
-          disabled={adding || !items.trim()}
-          className="w-full py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
-        >
-          {adding ? 'Adding...' : 'Add Return'}
-        </button>
       </div>
-    </main>
+    </div>
   );
 }
